@@ -158,6 +158,60 @@ func TestParse(t *testing.T) {
 				},
 			},
 		},
+
+		// Examples from RFC 7239 Section 7.1.
+		{
+			name: "rfc7239-section7-example1",
+			headers: []string{
+				`for=192.0.2.43,for="[2001:db8:cafe::17]",for=unknown`,
+			},
+			want: []*Forwarded{
+				{
+					For: "192.0.2.43",
+				},
+				{
+					For: "[2001:db8:cafe::17]",
+				},
+				{
+					For: "unknown",
+				},
+			},
+		},
+		{
+			name: "rfc7239-section7-example2",
+			headers: []string{
+				`for=192.0.2.43, for="[2001:db8:cafe::17]", for=unknown`,
+			},
+			want: []*Forwarded{
+				{
+					For: "192.0.2.43",
+				},
+				{
+					For: "[2001:db8:cafe::17]",
+				},
+				{
+					For: "unknown",
+				},
+			},
+		},
+		{
+			name: "rfc7239-section7-example3",
+			headers: []string{
+				`for=192.0.2.43`,
+				`for="[2001:db8:cafe::17]", for=unknown`,
+			},
+			want: []*Forwarded{
+				{
+					For: "192.0.2.43",
+				},
+				{
+					For: "[2001:db8:cafe::17]",
+				},
+				{
+					For: "unknown",
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
