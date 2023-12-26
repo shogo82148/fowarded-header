@@ -334,6 +334,12 @@ func TestParse_Error(t *testing.T) {
 				`for=192.0.2.1; for="[2001:db8:cafe::17]"`,
 			},
 		},
+		{
+			name: "issue-10",
+			headers: []string{
+				"For=\"::%]:00\"",
+			},
+		},
 	}
 
 	for _, tt := range tests {
