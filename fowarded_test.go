@@ -18,7 +18,7 @@ func TestForwarded_String(t *testing.T) {
 		{
 			name: "empty",
 			f:    &Forwarded{},
-			want: "",
+			want: "for=unknown",
 		},
 		{
 			name: "for",

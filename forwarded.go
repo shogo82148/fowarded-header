@@ -38,6 +38,10 @@ func (n Node) String() string {
 }
 
 func (n Node) write(buf *strings.Builder) {
+	if n == (Node{}) {
+		buf.WriteString("unknown")
+		return
+	}
 	if n.ObfuscatedNode != "" {
 		buf.WriteString(n.ObfuscatedNode)
 	} else {
@@ -280,6 +284,10 @@ func (f *Forwarded) String() string {
 }
 
 func (f *Forwarded) write(buf *strings.Builder) {
+	if f == nil || *f == (Forwarded{}) {
+		buf.WriteString("for=unknown")
+		return
+	}
 	start := buf.Len()
 	if f.By != (Node{}) {
 		writePair(buf, start, "by", f.By.String())
