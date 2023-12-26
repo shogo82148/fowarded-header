@@ -1,6 +1,7 @@
 package fowardedheader
 
 import (
+	"runtime"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -239,6 +240,26 @@ func TestParse(t *testing.T) {
 				t.Errorf("Parse() mismatch (-want +got):\n%s", diff)
 			}
 		})
+	}
+}
+
+func BenchmarkString(b *testing.B) {
+	f := &Forwarded{
+		For: `[2001:db8:cafe::17]:4711`,
+	}
+	for i := 0; i < b.N; i++ {
+		runtime.KeepAlive(f.String())
+	}
+}
+
+func BenchmarkParse(b *testing.B) {
+	headers := []string{`For="[2001:db8:cafe::17]:4711"`, `for=192.0.2.60;proto=http;by=203.0.113.43`}
+	for i := 0; i < b.N; i++ {
+		f, err := Parse(headers)
+		if err != nil {
+			b.Fatal(err)
+		}
+		runtime.KeepAlive(f)
 	}
 }
 
