@@ -523,6 +523,9 @@ func (p *parser) parseNode(s string) (Node, error) {
 		}
 		if portPos < end {
 			portPos = -1
+			if end != len(s)-1 {
+				return Node{}, p.newError("unexpected ']' in address")
+			}
 		} else if portPos != end+1 {
 			return Node{}, p.newError("unexpected ':' in address")
 		}
