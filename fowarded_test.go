@@ -107,6 +107,8 @@ func TestParse(t *testing.T) {
 			headers: []string{},
 			want:    []*Forwarded{},
 		},
+
+		// Examples from RFC 7239 Section 4.
 		{
 			name: "for-gazonk",
 			headers: []string{
@@ -115,6 +117,30 @@ func TestParse(t *testing.T) {
 			want: []*Forwarded{
 				{
 					For: "_gazonk",
+				},
+			},
+		},
+		{
+			name: "for-ipv6",
+			headers: []string{
+				`For="[2001:db8:cafe::17]:4711"`,
+			},
+			want: []*Forwarded{
+				{
+					For: "[2001:db8:cafe::17]:4711",
+				},
+			},
+		},
+		{
+			name: "for-and-proto",
+			headers: []string{
+				`for=192.0.2.60;proto=http;by=203.0.113.43`,
+			},
+			want: []*Forwarded{
+				{
+					For:   "192.0.2.60",
+					Proto: "http",
+					By:    "203.0.113.43",
 				},
 			},
 		},
