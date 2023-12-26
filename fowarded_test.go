@@ -269,6 +269,85 @@ func TestParse(t *testing.T) {
 	}
 }
 
+func TestParse_Error(t *testing.T) {
+	tests := []struct {
+		name    string
+		headers []string
+	}{
+		{
+			name: "unbalanced-quotes",
+			headers: []string{
+				`for="[2001:db8:cafe::17]`, // missing closing quote
+			},
+		},
+		{
+			"missing-bracket",
+			[]string{
+				`for="[2001:db8:cafe::17:4711"`,
+			},
+		},
+		{
+			name: "garbage-after-ipv6-address",
+			headers: []string{
+				`for="[2001:db8:cafe::17]4711"`,
+			},
+		},
+		{
+			name: "unexpected-colon",
+			headers: []string{
+				`for="[2001:db8:cafe::17]4711:"`,
+			},
+		},
+		{
+			name: "invalid-ipv6-address",
+			headers: []string{
+				`for="[2001:db8:cafe::INVALID]"`,
+			},
+		},
+		{
+			name: "invalid-ipv4-address",
+			headers: []string{
+				`for=192.0.2.256`,
+			},
+		},
+		{
+			name: "invalid-port",
+			headers: []string{
+				`for="192.0.2.1:0x12"`,
+			},
+		},
+		{
+			name: "invalid-obfuscated-node",
+			headers: []string{
+				`for="_*****"`,
+			},
+		},
+		{
+			name: "invalid-obfuscated-port",
+			headers: []string{
+				`for="_gazonk:_*****"`,
+			},
+		},
+		{
+			name: "duplicate-key",
+			headers: []string{
+				`for=192.0.2.1; for="[2001:db8:cafe::17]"`,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := Parse(tt.headers)
+			if err == nil {
+				t.Errorf("Parse() error = %v", err)
+				return
+			}
+		})
+	}
+}
+
 func BenchmarkString(b *testing.B) {
 	f := &Forwarded{
 		For: Node{
