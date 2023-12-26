@@ -107,6 +107,8 @@ func TestParse(t *testing.T) {
 			headers: []string{},
 			want:    []*Forwarded{},
 		},
+
+		// Examples from RFC 7239 Section 4.
 		{
 			name: "for-gazonk",
 			headers: []string{
@@ -115,6 +117,98 @@ func TestParse(t *testing.T) {
 			want: []*Forwarded{
 				{
 					For: "_gazonk",
+				},
+			},
+		},
+		{
+			name: "for-ipv6",
+			headers: []string{
+				`For="[2001:db8:cafe::17]:4711"`,
+			},
+			want: []*Forwarded{
+				{
+					For: "[2001:db8:cafe::17]:4711",
+				},
+			},
+		},
+		{
+			name: "for-and-proto",
+			headers: []string{
+				`for=192.0.2.60;proto=http;by=203.0.113.43`,
+			},
+			want: []*Forwarded{
+				{
+					For:   "192.0.2.60",
+					Proto: "http",
+					By:    "203.0.113.43",
+				},
+			},
+		},
+		{
+			name: "multiple-for",
+			headers: []string{
+				`for=192.0.2.43, for=198.51.100.17`,
+			},
+			want: []*Forwarded{
+				{
+					For: "192.0.2.43",
+				},
+				{
+					For: "198.51.100.17",
+				},
+			},
+		},
+
+		// Examples from RFC 7239 Section 7.1.
+		{
+			name: "rfc7239-section7-example1",
+			headers: []string{
+				`for=192.0.2.43,for="[2001:db8:cafe::17]",for=unknown`,
+			},
+			want: []*Forwarded{
+				{
+					For: "192.0.2.43",
+				},
+				{
+					For: "[2001:db8:cafe::17]",
+				},
+				{
+					For: "unknown",
+				},
+			},
+		},
+		{
+			name: "rfc7239-section7-example2",
+			headers: []string{
+				`for=192.0.2.43, for="[2001:db8:cafe::17]", for=unknown`,
+			},
+			want: []*Forwarded{
+				{
+					For: "192.0.2.43",
+				},
+				{
+					For: "[2001:db8:cafe::17]",
+				},
+				{
+					For: "unknown",
+				},
+			},
+		},
+		{
+			name: "rfc7239-section7-example3",
+			headers: []string{
+				`for=192.0.2.43`,
+				`for="[2001:db8:cafe::17]", for=unknown`,
+			},
+			want: []*Forwarded{
+				{
+					For: "192.0.2.43",
+				},
+				{
+					For: "[2001:db8:cafe::17]",
+				},
+				{
+					For: "unknown",
 				},
 			},
 		},

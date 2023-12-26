@@ -299,6 +299,7 @@ func (p *parser) decodeForwardedElement() (*Forwarded, error) {
 			if p.peek() != ';' {
 				return f, nil
 			}
+			p.next()
 		}
 		key, value, err := p.decodeForwardedPair()
 		if err != nil {
