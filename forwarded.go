@@ -47,7 +47,7 @@ func (n Node) write(buf *strings.Builder) {
 	} else {
 		if n.IP.Is6() {
 			buf.WriteByte('[')
-			buf.WriteString(n.IP.String())
+			buf.WriteString(n.IP.WithZone("").String())
 			buf.WriteByte(']')
 		} else {
 			buf.WriteString(n.IP.String())
@@ -533,6 +533,9 @@ func (p *parser) parseNode(s string) (Node, error) {
 		if err != nil {
 			return Node{}, err
 		}
+		if ip.Zone() != "" {
+			return Node{}, p.newError("unexpected zone identifier")
+		}
 		n.IP = ip
 	} else {
 		// ipv4
@@ -545,6 +548,9 @@ func (p *parser) parseNode(s string) (Node, error) {
 		}
 		if err != nil {
 			return Node{}, err
+		}
+		if ip.Zone() != "" {
+			return Node{}, p.newError("unexpected zone identifier")
 		}
 		n.IP = ip
 	}
