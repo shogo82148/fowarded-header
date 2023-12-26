@@ -144,6 +144,20 @@ func TestParse(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "multiple-for",
+			headers: []string{
+				`for=192.0.2.43, for=198.51.100.17`,
+			},
+			want: []*Forwarded{
+				{
+					For: "192.0.2.43",
+				},
+				{
+					For: "198.51.100.17",
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
