@@ -3,22 +3,59 @@ package fowardedheader
 import (
 	"fmt"
 	"io"
+	"net/netip"
+	"strconv"
 	"strings"
 )
 
 // Forwarded represents the Forwarded header.
 type Forwarded struct {
 	// By is used to disclose the interface where the request came in to the proxy server.
-	By string
+	By Node
 
 	// For is used to disclose information about the client that initiated the request and subsequent proxies in a chain of proxies.
-	For string
+	For Node
 
 	// Host is used to forward the original value of the "Host" header field.
 	Host string
 
 	// Proto is the value of the used protocol type.
 	Proto string
+}
+
+// A Node represents a node identifier in a Forwarded header
+type Node struct {
+	IP             netip.Addr
+	Port           int
+	ObfuscatedNode string
+	ObfuscatedPort string
+}
+
+func (n Node) String() string {
+	var buf strings.Builder
+	n.write(&buf)
+	return buf.String()
+}
+
+func (n Node) write(buf *strings.Builder) {
+	if n.ObfuscatedNode != "" {
+		buf.WriteString(n.ObfuscatedNode)
+	} else {
+		if n.IP.Is6() {
+			buf.WriteByte('[')
+			buf.WriteString(n.IP.WithZone("").String())
+			buf.WriteByte(']')
+		} else {
+			buf.WriteString(n.IP.String())
+		}
+	}
+	if n.ObfuscatedPort != "" {
+		buf.WriteByte(':')
+		buf.WriteString(n.ObfuscatedPort)
+	} else if n.Port != 0 {
+		buf.WriteByte(':')
+		buf.WriteString(strconv.Itoa(n.Port))
+	}
 }
 
 // Error represents an error that occurred while parsing the Forwarded header.
@@ -163,8 +200,12 @@ func (f *Forwarded) String() string {
 
 func (f *Forwarded) write(buf *strings.Builder) {
 	start := buf.Len()
-	writePair(buf, start, "by", f.By)
-	writePair(buf, start, "for", f.For)
+	if f.By != (Node{}) {
+		writePair(buf, start, "by", f.By.String())
+	}
+	if f.For != (Node{}) {
+		writePair(buf, start, "for", f.For.String())
+	}
 	writePair(buf, start, "host", f.Host)
 	writePair(buf, start, "proto", f.Proto)
 }
@@ -340,15 +381,94 @@ func (p *parser) decodeForwardedElement() (*Forwarded, error) {
 
 		switch key {
 		case "by":
-			f.By = value
+			node, err := p.parseNode(value)
+			if err != nil {
+				return nil, err
+			}
+			f.By = node
 		case "for":
-			f.For = value
+			node, err := p.parseNode(value)
+			if err != nil {
+				return nil, err
+			}
+			f.For = node
 		case "host":
-			f.Host = value
+			// host is case-insensitive
+			f.Host = strings.ToLower(value)
 		case "proto":
-			f.Proto = value
+			if strings.EqualFold(value, "https") {
+				f.Proto = "https"
+			} else if strings.EqualFold(value, "http") {
+				f.Proto = "http"
+			} else {
+				f.Proto = strings.ToLower(value)
+			}
 		}
 	}
+}
+
+func (p *parser) parseNode(s string) (Node, error) {
+	s = strings.TrimSpace(s)
+	if s == "" || strings.EqualFold(s, "unknown") {
+		return Node{}, nil
+	}
+
+	var n Node
+	portPos := strings.LastIndexByte(s, ':')
+
+	if s[0] == '_' {
+		// obfuscated node
+		if portPos < 0 {
+			n.ObfuscatedNode = s
+		} else {
+			n.ObfuscatedNode = s[:portPos]
+		}
+	} else if s[0] == '[' {
+		// ipv6
+		end := strings.IndexByte(s, ']')
+		if end < 0 {
+			return Node{}, p.newError("missing ']' in address")
+		}
+		if portPos < end {
+			portPos = -1
+		} else if portPos != end+1 {
+			return Node{}, p.newError("unexpected ':' in address")
+		}
+		ip, err := netip.ParseAddr(s[1:end])
+		if err != nil {
+			return Node{}, err
+		}
+		n.IP = ip
+	} else {
+		// ipv4
+		var ip netip.Addr
+		var err error
+		if portPos < 0 {
+			ip, err = netip.ParseAddr(s)
+		} else {
+			ip, err = netip.ParseAddr(s[:portPos])
+		}
+		if err != nil {
+			return Node{}, err
+		}
+		n.IP = ip
+	}
+
+	// parse port
+	if portPos < 0 {
+		return n, nil
+	}
+	if portPos+1 < len(s) && s[portPos+1] == '_' {
+		// obfuscated port
+		n.ObfuscatedPort = s[portPos+1:]
+	} else {
+		port, err := strconv.Atoi(s[portPos+1:])
+		if err != nil {
+			return Node{}, err
+		}
+		n.Port = port
+	}
+	return n, nil
 }
 
 func (p *parser) parse(f []*Forwarded) ([]*Forwarded, error) {

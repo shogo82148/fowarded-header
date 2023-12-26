@@ -1,10 +1,12 @@
 package fowardedheader
 
 import (
+	"net/netip"
 	"runtime"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 func TestForwarded_String(t *testing.T) {
@@ -21,37 +23,51 @@ func TestForwarded_String(t *testing.T) {
 		{
 			name: "for",
 			f: &Forwarded{
-				For: "_gazonk",
+				For: Node{
+					ObfuscatedNode: "_gazonk",
+				},
 			},
 			want: `for=_gazonk`,
 		},
 		{
 			name: "for-ipv6",
 			f: &Forwarded{
-				For: `[2001:db8:cafe::17]`,
+				For: Node{
+					IP: netip.MustParseAddr("2001:db8:cafe::17"),
+				},
 			},
 			want: `for="[2001:db8:cafe::17]"`,
 		},
 		{
 			name: "for-ipv4-and-port",
 			f: &Forwarded{
-				For: `192.0.2.43:47011`,
+				For: Node{
+					IP:   netip.MustParseAddr("192.0.2.43"),
+					Port: 47011,
+				},
 			},
 			want: `for="192.0.2.43:47011"`,
 		},
 		{
 			name: "for-ipv6-and-port",
 			f: &Forwarded{
-				For: `[2001:db8:cafe::17]:4711`,
+				For: Node{
+					IP:   netip.MustParseAddr("2001:db8:cafe::17"),
+					Port: 4711,
+				},
 			},
 			want: `for="[2001:db8:cafe::17]:4711"`,
 		},
 		{
 			name: "for-ipv6-and-port-and-extensions",
 			f: &Forwarded{
-				For:   `192.0.2.60`,
+				For: Node{
+					IP: netip.MustParseAddr("192.0.2.60"),
+				},
 				Proto: "http",
-				By:    `203.0.113.43`,
+				By: Node{
+					IP: netip.MustParseAddr("203.0.113.43"),
+				},
 			},
 			want: `by=203.0.113.43;for=192.0.2.60;proto=http`,
 		},
@@ -68,22 +84,6 @@ func TestForwarded_String(t *testing.T) {
 				Proto: "https",
 			},
 			want: `proto=https`,
-		},
-
-		// escape
-		{
-			name: "back-slash",
-			f: &Forwarded{
-				For: `\`,
-			},
-			want: `for="\\"`,
-		},
-		{
-			name: "double-quote",
-			f: &Forwarded{
-				For: `"`,
-			},
-			want: `for="\""`,
 		},
 	}
 
@@ -120,7 +120,9 @@ func TestParse(t *testing.T) {
 			},
 			want: []*Forwarded{
 				{
-					For: "_gazonk",
+					For: Node{
+						ObfuscatedNode: "_gazonk",
+					},
 				},
 			},
 		},
@@ -131,7 +133,10 @@ func TestParse(t *testing.T) {
 			},
 			want: []*Forwarded{
 				{
-					For: "[2001:db8:cafe::17]:4711",
+					For: Node{
+						IP:   netip.MustParseAddr("2001:db8:cafe::17"),
+						Port: 4711,
+					},
 				},
 			},
 		},
@@ -142,9 +147,13 @@ func TestParse(t *testing.T) {
 			},
 			want: []*Forwarded{
 				{
-					For:   "192.0.2.60",
+					For: Node{
+						IP: netip.MustParseAddr("192.0.2.60"),
+					},
 					Proto: "http",
-					By:    "203.0.113.43",
+					By: Node{
+						IP: netip.MustParseAddr("203.0.113.43"),
+					},
 				},
 			},
 		},
@@ -155,10 +164,14 @@ func TestParse(t *testing.T) {
 			},
 			want: []*Forwarded{
 				{
-					For: "192.0.2.43",
+					For: Node{
+						IP: netip.MustParseAddr("192.0.2.43"),
+					},
 				},
 				{
-					For: "198.51.100.17",
+					For: Node{
+						IP: netip.MustParseAddr("198.51.100.17"),
+					},
 				},
 			},
 		},
@@ -171,13 +184,17 @@ func TestParse(t *testing.T) {
 			},
 			want: []*Forwarded{
 				{
-					For: "192.0.2.43",
+					For: Node{
+						IP: netip.MustParseAddr("192.0.2.43"),
+					},
 				},
 				{
-					For: "[2001:db8:cafe::17]",
+					For: Node{
+						IP: netip.MustParseAddr("2001:db8:cafe::17"),
+					},
 				},
 				{
-					For: "unknown",
+					For: Node{},
 				},
 			},
 		},
@@ -188,13 +205,17 @@ func TestParse(t *testing.T) {
 			},
 			want: []*Forwarded{
 				{
-					For: "192.0.2.43",
+					For: Node{
+						IP: netip.MustParseAddr("192.0.2.43"),
+					},
 				},
 				{
-					For: "[2001:db8:cafe::17]",
+					For: Node{
+						IP: netip.MustParseAddr("2001:db8:cafe::17"),
+					},
 				},
 				{
-					For: "unknown",
+					For: Node{},
 				},
 			},
 		},
@@ -206,13 +227,17 @@ func TestParse(t *testing.T) {
 			},
 			want: []*Forwarded{
 				{
-					For: "192.0.2.43",
+					For: Node{
+						IP: netip.MustParseAddr("192.0.2.43"),
+					},
 				},
 				{
-					For: "[2001:db8:cafe::17]",
+					For: Node{
+						IP: netip.MustParseAddr("2001:db8:cafe::17"),
+					},
 				},
 				{
-					For: "unknown",
+					For: Node{},
 				},
 			},
 		},
@@ -236,7 +261,8 @@ func TestParse(t *testing.T) {
 				t.Errorf("Parse() error = %v", err)
 				return
 			}
-			if diff := cmp.Diff(got, tt.want); diff != "" {
+			opts := cmpopts.EquateComparable(netip.Addr{})
+			if diff := cmp.Diff(tt.want, got, opts); diff != "" {
 				t.Errorf("Parse() mismatch (-want +got):\n%s", diff)
 			}
 		})
@@ -245,7 +271,9 @@ func TestParse(t *testing.T) {
 
 func BenchmarkString(b *testing.B) {
 	f := &Forwarded{
-		For: `[2001:db8:cafe::17]:4711`,
+		For: Node{
+			IP: netip.MustParseAddr("2001:db8:cafe::17"),
+		},
 	}
 	for i := 0; i < b.N; i++ {
 		runtime.KeepAlive(f.String())
@@ -281,7 +309,8 @@ func FuzzParse(f *testing.F) {
 			t.Errorf("%q: %v", encoded, err)
 		}
 
-		if diff := cmp.Diff(parsed, parsed2); diff != "" {
+		opts := cmpopts.EquateComparable(netip.Addr{})
+		if diff := cmp.Diff(parsed, parsed2, opts); diff != "" {
 			t.Errorf("Parse() mismatch (-want +got):\n%s", diff)
 		}
 	})
