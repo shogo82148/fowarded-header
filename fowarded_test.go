@@ -1,8 +1,9 @@
 package fowardedheader
 
 import (
-	"reflect"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestForwarded_String(t *testing.T) {
@@ -106,6 +107,17 @@ func TestParse(t *testing.T) {
 			headers: []string{},
 			want:    []*Forwarded{},
 		},
+		{
+			name: "for-gazonk",
+			headers: []string{
+				`for="_gazonk"`,
+			},
+			want: []*Forwarded{
+				{
+					For: "_gazonk",
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -116,8 +128,8 @@ func TestParse(t *testing.T) {
 				t.Errorf("Parse() error = %v", err)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Parse() got = %#v, want %#v", got, tt.want)
+			if diff := cmp.Diff(got, tt.want); diff != "" {
+				t.Errorf("Parse() mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}
