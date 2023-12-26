@@ -43,7 +43,7 @@ func (n Node) write(buf *strings.Builder) {
 	} else {
 		if n.IP.Is6() {
 			buf.WriteByte('[')
-			buf.WriteString(n.IP.WithZone("").String())
+			buf.WriteString(n.IP.String())
 			buf.WriteByte(']')
 		} else {
 			buf.WriteString(n.IP.String())
@@ -153,9 +153,90 @@ var validTchar = [256]bool{
 	'Z': true,
 }
 
-func IsValidToken(s string) bool {
+var validObfChar = [256]bool{
+	'-': true,
+	'.': true,
+	'_': true,
+
+	// DIGIT
+	'0': true,
+	'1': true,
+	'2': true,
+	'3': true,
+	'4': true,
+	'5': true,
+	'6': true,
+	'7': true,
+	'8': true,
+	'9': true,
+
+	// ALPHA
+	'a': true,
+	'b': true,
+	'c': true,
+	'd': true,
+	'e': true,
+	'f': true,
+	'g': true,
+	'h': true,
+	'i': true,
+	'j': true,
+	'k': true,
+	'l': true,
+	'm': true,
+	'n': true,
+	'o': true,
+	'p': true,
+	'q': true,
+	'r': true,
+	's': true,
+	't': true,
+	'u': true,
+	'v': true,
+	'w': true,
+	'x': true,
+	'y': true,
+	'z': true,
+	'A': true,
+	'B': true,
+	'C': true,
+	'D': true,
+	'E': true,
+	'F': true,
+	'G': true,
+	'H': true,
+	'I': true,
+	'J': true,
+	'K': true,
+	'L': true,
+	'M': true,
+	'N': true,
+	'O': true,
+	'P': true,
+	'Q': true,
+	'R': true,
+	'S': true,
+	'T': true,
+	'U': true,
+	'V': true,
+	'W': true,
+	'X': true,
+	'Y': true,
+	'Z': true,
+}
+
+func isValidToken(s string) bool {
 	for _, r := range []byte(s) {
 		if !validTchar[r] {
+			return false
+		}
+	}
+	return true
+}
+
+func isValidObf(s string) bool {
+	for _, r := range []byte(s) {
+		if !validObfChar[r] {
 			return false
 		}
 	}
@@ -183,7 +264,7 @@ func writePair(buf *strings.Builder, start int, key, value string) {
 
 	buf.WriteString(key)
 	buf.WriteByte('=')
-	if IsValidToken(value) {
+	if isValidToken(value) {
 		buf.WriteString(value)
 	} else {
 		writeQuotedString(buf, value)
@@ -423,6 +504,9 @@ func (p *parser) parseNode(s string) (Node, error) {
 		} else {
 			n.ObfuscatedNode = s[:portPos]
 		}
+		if !isValidObf(n.ObfuscatedNode) {
+			return Node{}, p.newError("invalid obfuscated node")
+		}
 	} else if s[0] == '[' {
 		// ipv6
 		end := strings.IndexByte(s, ']')
@@ -461,6 +545,9 @@ func (p *parser) parseNode(s string) (Node, error) {
 	if portPos+1 < len(s) && s[portPos+1] == '_' {
 		// obfuscated port
 		n.ObfuscatedPort = s[portPos+1:]
+		if !isValidObf(n.ObfuscatedPort) {
+			return Node{}, p.newError("invalid obfuscated port")
+		}
 	} else {
 		port, err := strconv.Atoi(s[portPos+1:])
 		if err != nil {
