@@ -1,5 +1,5 @@
 module github.com/shogo82148/fowarded-header
 
-go 1.21.4
+go 1.18
 
 require github.com/google/go-cmp v0.6.0
