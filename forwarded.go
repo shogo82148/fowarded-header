@@ -141,6 +141,8 @@ func writePair(buf *strings.Builder, key, value string) {
 	}
 }
 
+// String returns the string representation of the Forwarded header.
+// The returned string is a valid Forwarded header.
 func (f *Forwarded) String() string {
 	var buf strings.Builder
 	writePair(&buf, "by", f.By)

@@ -45,6 +45,15 @@ func TestForwarded_String(t *testing.T) {
 			want: `for="[2001:db8:cafe::17]:4711"`,
 		},
 		{
+			name: "for-ipv6-and-port-and-extensions",
+			f: &Forwarded{
+				For:   `192.0.2.60`,
+				Proto: "http",
+				By:    `203.0.113.43`,
+			},
+			want: `by=203.0.113.43;for=192.0.2.60;proto=http`,
+		},
+		{
 			name: "proto-http",
 			f: &Forwarded{
 				Proto: "http",
