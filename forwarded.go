@@ -136,11 +136,11 @@ func writeQuotedString(w io.ByteWriter, s string) {
 	w.WriteByte('"')
 }
 
-func writePair(buf *strings.Builder, key, value string) {
+func writePair(buf *strings.Builder, start int, key, value string) {
 	if value == "" {
 		return
 	}
-	if buf.Len() > 0 {
+	if buf.Len() > start {
 		buf.WriteByte(';')
 	}
 
@@ -157,10 +157,30 @@ func writePair(buf *strings.Builder, key, value string) {
 // The returned string is a valid Forwarded header.
 func (f *Forwarded) String() string {
 	var buf strings.Builder
-	writePair(&buf, "by", f.By)
-	writePair(&buf, "for", f.For)
-	writePair(&buf, "host", f.Host)
-	writePair(&buf, "proto", f.Proto)
+	f.write(&buf)
+	return buf.String()
+}
+
+func (f *Forwarded) write(buf *strings.Builder) {
+	start := buf.Len()
+	writePair(buf, start, "by", f.By)
+	writePair(buf, start, "for", f.For)
+	writePair(buf, start, "host", f.Host)
+	writePair(buf, start, "proto", f.Proto)
+}
+
+// Encode encodes the Forwarded header.
+func Encode(f []*Forwarded) string {
+	if len(f) == 0 {
+		return ""
+	}
+
+	var buf strings.Builder
+	f[0].write(&buf)
+	for i := 1; i < len(f); i++ {
+		buf.WriteByte(',')
+		f[i].write(&buf)
+	}
 	return buf.String()
 }
 
@@ -223,7 +243,7 @@ func (p *parser) decodeToken() (string, error) {
 		p.next()
 	}
 	if start == p.pos {
-		return "", nil
+		return "", p.newError("expected token but not")
 	}
 	return p.s[start:p.pos], nil
 }
@@ -293,6 +313,12 @@ func (p *parser) decodeForwardedPair() (string, string, error) {
 func (p *parser) decodeForwardedElement() (*Forwarded, error) {
 	seen := map[string]bool{}
 	f := &Forwarded{}
+
+	p.skipSpace()
+	if ch := p.peek(); ch < 0 || !validTchar[ch] {
+		return f, nil
+	}
+
 	for {
 		if len(seen) > 0 {
 			p.skipSpace()
@@ -301,6 +327,7 @@ func (p *parser) decodeForwardedElement() (*Forwarded, error) {
 			}
 			p.next()
 		}
+
 		key, value, err := p.decodeForwardedPair()
 		if err != nil {
 			return nil, err

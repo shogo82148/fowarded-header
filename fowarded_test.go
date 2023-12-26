@@ -69,6 +69,7 @@ func TestForwarded_String(t *testing.T) {
 			want: `proto=https`,
 		},
 
+		// escape
 		{
 			name: "back-slash",
 			f: &Forwarded{
@@ -103,9 +104,11 @@ func TestParse(t *testing.T) {
 		want    []*Forwarded
 	}{
 		{
-			name:    "empty",
-			headers: []string{},
-			want:    []*Forwarded{},
+			name:    "empty-string",
+			headers: []string{""},
+			want: []*Forwarded{
+				{},
+			},
 		},
 
 		// Examples from RFC 7239 Section 4.
@@ -212,6 +215,16 @@ func TestParse(t *testing.T) {
 				},
 			},
 		},
+
+		{
+			name: "unknown-key",
+			headers: []string{
+				`foo=bar`,
+			},
+			want: []*Forwarded{
+				{},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -227,4 +240,28 @@ func TestParse(t *testing.T) {
 			}
 		})
 	}
+}
+
+func FuzzParse(f *testing.F) {
+	f.Add(`for="_gazonk"`)
+	f.Add(`For="[2001:db8:cafe::17]:4711"`)
+	f.Add(`for=192.0.2.60;proto=http;by=203.0.113.43`)
+
+	f.Fuzz(func(t *testing.T, s string) {
+		parsed, err := Parse([]string{s})
+		if err != nil {
+			return
+		}
+
+		encoded := Encode(parsed)
+
+		parsed2, err := Parse([]string{encoded})
+		if err != nil {
+			t.Errorf("%q: %v", encoded, err)
+		}
+
+		if diff := cmp.Diff(parsed, parsed2); diff != "" {
+			t.Errorf("Parse() mismatch (-want +got):\n%s", diff)
+		}
+	})
 }
