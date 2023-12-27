@@ -85,6 +85,35 @@ func TestForwarded_String(t *testing.T) {
 			},
 			want: `proto=https`,
 		},
+		{
+			name: "invalid ip address",
+			f: &Forwarded{
+				For: Node{
+					Port: 47011,
+				},
+			},
+			want: `for=":47011"`,
+		},
+
+		{
+			name: "sanitize-obfuscated-node",
+			f: &Forwarded{
+				For: Node{
+					ObfuscatedNode: "_*****",
+				},
+			},
+			want: `for=______`,
+		},
+		{
+			name: "sanitize-obfuscated-port",
+			f: &Forwarded{
+				For: Node{
+					ObfuscatedNode: "foo",
+					ObfuscatedPort: "_*****",
+				},
+			},
+			want: `for="_foo:______"`,
+		},
 	}
 
 	for _, tt := range tests {
