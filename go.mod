@@ -1,4 +1,4 @@
-module github.com/shogo82148/fowarded-header
+module github.com/shogo82148/forwarded-header
 
 go 1.18
 

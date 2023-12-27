@@ -1,4 +1,4 @@
-package fowardedheader
+package forwardedheader
 
 import (
 	"fmt"
