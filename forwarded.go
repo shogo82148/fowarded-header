@@ -43,7 +43,7 @@ func (n Node) write(buf *strings.Builder) {
 		return
 	}
 	if n.ObfuscatedNode != "" {
-		buf.WriteString(n.ObfuscatedNode)
+		n.writeObfuscated(buf, n.ObfuscatedNode)
 	} else {
 		if n.IP.Is6() {
 			buf.WriteByte('[')
@@ -55,10 +55,23 @@ func (n Node) write(buf *strings.Builder) {
 	}
 	if n.ObfuscatedPort != "" {
 		buf.WriteByte(':')
-		buf.WriteString(n.ObfuscatedPort)
+		n.writeObfuscated(buf, n.ObfuscatedPort)
 	} else if n.Port != 0 {
 		buf.WriteByte(':')
 		buf.WriteString(strconv.Itoa(n.Port))
+	}
+}
+
+func (Node) writeObfuscated(buf *strings.Builder, s string) {
+	if !strings.HasPrefix(s, "_") {
+		buf.WriteByte('_')
+	}
+	for _, b := range []byte(s) {
+		if validObfChar[b] {
+			buf.WriteByte(b)
+		} else {
+			buf.WriteByte('_')
+		}
 	}
 }
 
