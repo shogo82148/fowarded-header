@@ -44,7 +44,7 @@ func (n Node) write(buf *strings.Builder) {
 	}
 	if n.ObfuscatedNode != "" {
 		n.writeObfuscated(buf, n.ObfuscatedNode)
-	} else {
+	} else if n.IP.IsValid() {
 		if n.IP.Is6() {
 			buf.WriteByte('[')
 			buf.WriteString(n.IP.WithZone("").String())

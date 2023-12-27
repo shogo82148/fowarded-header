@@ -85,6 +85,15 @@ func TestForwarded_String(t *testing.T) {
 			},
 			want: `proto=https`,
 		},
+		{
+			name: "invalid ip address",
+			f: &Forwarded{
+				For: Node{
+					Port: 47011,
+				},
+			},
+			want: `for=":47011"`,
+		},
 
 		{
 			name: "sanitize-obfuscated-node",
