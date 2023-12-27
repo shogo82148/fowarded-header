@@ -271,6 +271,26 @@ func writeQuotedString(w io.ByteWriter, s string) {
 	w.WriteByte('"')
 }
 
+func writeNode(buf *strings.Builder, start int, key string, node Node) {
+	if node == (Node{}) {
+		return
+	}
+	if buf.Len() > start {
+		buf.WriteByte(';')
+	}
+	needQuote := (node.IP.IsValid() && node.IP.Is6()) || node.ObfuscatedPort != "" || node.Port != 0
+
+	buf.WriteString(key)
+	buf.WriteByte('=')
+	if needQuote {
+		buf.WriteByte('"')
+	}
+	node.write(buf)
+	if needQuote {
+		buf.WriteByte('"')
+	}
+}
+
 func writePair(buf *strings.Builder, start int, key, value string) {
 	if value == "" {
 		return
@@ -302,12 +322,8 @@ func (f *Forwarded) write(buf *strings.Builder) {
 		return
 	}
 	start := buf.Len()
-	if f.By != (Node{}) {
-		writePair(buf, start, "by", f.By.String())
-	}
-	if f.For != (Node{}) {
-		writePair(buf, start, "for", f.For.String())
-	}
+	writeNode(buf, start, "by", f.By)
+	writeNode(buf, start, "for", f.For)
 	writePair(buf, start, "host", f.Host)
 	writePair(buf, start, "proto", f.Proto)
 }
