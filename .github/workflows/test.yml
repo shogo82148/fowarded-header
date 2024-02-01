@@ -32,3 +32,4 @@ jobs:
         with:
           files: profile.cov
           flags: Go-${{ matrix.go }}
+          token: ${{ secrets.CODECOV_TOKEN }}
